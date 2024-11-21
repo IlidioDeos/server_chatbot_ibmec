@@ -16,7 +16,7 @@ import purchaseRoutes from './routes/purchase.routes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configurar CORS antes de outras middlewares
+// Configurar CORS
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -28,54 +28,24 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Middleware para garantir que todas as respostas sejam JSON
-app.use('/api', (req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
-  
-  // Interceptar o método send para garantir que sempre enviamos JSON válido
-  const originalSend = res.send;
-  res.send = function(body) {
-    try {
-      // Se o body já for uma string JSON, não precisa converter
-      if (typeof body === 'string') {
-        try {
-          JSON.parse(body); // Verificar se é JSON válido
-          return originalSend.call(this, body);
-        } catch (e) {
-          body = JSON.stringify(body);
-        }
-      } else {
-        body = JSON.stringify(body);
-      }
-      return originalSend.call(this, body);
-    } catch (error) {
-      console.error('Erro ao converter resposta para JSON:', error);
-      return res.status(500).json({ 
-        error: 'Internal Server Error',
-        message: 'Erro ao processar resposta'
-      });
-    }
-  };
-  
-  next();
-});
-
-// Middleware para logging mais detalhado
-app.use('/api', (req, res, next) => {
-  console.log('Request recebida:');
-  console.log('URL:', req.url);
-  console.log('Method:', req.method);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Query:', req.query);
-  console.log('Params:', req.params);
-  next();
-});
-
 app.use(express.json());
 
+// Configurar rotas do Swagger primeiro
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "API E-commerce Documentation"
+}));
+
+// Rota para acessar a documentação JSON do Swagger
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Rota básica para healthcheck
-app.get('/', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV });
 });
 
@@ -93,12 +63,22 @@ app.use('/api/*', (req, res) => {
   });
 });
 
-// Rota para servir o frontend em produção
-app.use(express.static('dist'));
+// Servir arquivos estáticos do frontend apenas se não for uma rota da API ou Swagger
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api') || req.url.startsWith('/api-docs')) {
+    next();
+  } else {
+    express.static('dist')(req, res, next);
+  }
+});
 
 // Todas as outras rotas não encontradas retornam o index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+app.get('*', (req, res, next) => {
+  if (req.url.startsWith('/api') || req.url.startsWith('/api-docs')) {
+    next();
+  } else {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  }
 });
 
 // Error handling middleware
@@ -110,9 +90,6 @@ app.use((err, req, res, next) => {
     timestamp: new Date().toISOString()
   });
 });
-
-// Swagger setup
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const startServer = async () => {
   try {
