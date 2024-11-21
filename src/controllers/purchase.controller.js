@@ -86,8 +86,9 @@ export const createPurchase = async (req, res) => {
     }, { transaction: t });
 
     // Atualizar o saldo do cliente
+    const newBalance = Number(customer.balance) - Number(totalPrice);
     await customer.update({
-      balance: sequelize.literal(`balance - ${totalPrice}`)
+      balance: String(newBalance) // Garantir que o saldo é uma string
     }, { transaction: t });
 
     // Buscar a compra completa com as relações
@@ -100,9 +101,11 @@ export const createPurchase = async (req, res) => {
     });
 
     await t.commit();
+
+    // Retornar a compra com o novo saldo como string
     res.status(201).json({
       ...fullPurchase.toJSON(),
-      newBalance: customer.balance - totalPrice
+      newBalance: String(newBalance) // Garantir que o novo saldo é uma string
     });
   } catch (error) {
     await t.rollback();
