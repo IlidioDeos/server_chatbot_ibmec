@@ -57,25 +57,39 @@ export const deleteCustomer = async (req, res) => {
 };
 
 export const getCustomerBalance = async (req, res) => {
-  console.log('Requisição recebida para email:', req.params.email);
+  const { email } = req.params;
+  console.log('Requisição de saldo recebida para email:', email);
+  console.log('Headers da requisição:', req.headers);
+  
   try {
+    // Garantir que estamos enviando JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     const customer = await Customer.findOne({
-      where: { email: req.params.email },
+      where: { email },
       attributes: ['balance', 'name']
     });
 
     if (!customer) {
-      console.log('Cliente não encontrado:', req.params.email);
-      return res.status(404).json({ message: 'Cliente não encontrado' });
+      console.log('Cliente não encontrado:', email);
+      return res.status(404).json({ 
+        message: 'Cliente não encontrado',
+        requestedEmail: email 
+      });
     }
 
-    console.log('Saldo encontrado:', customer.balance);
-    res.json({
+    console.log('Saldo encontrado para', email, ':', customer.balance);
+    const response = {
       balance: customer.balance,
       name: customer.name
-    });
+    };
+    console.log('Enviando resposta:', response);
+    return res.json(response);
   } catch (error) {
     console.error('Erro ao consultar saldo:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message,
+      requestedEmail: email 
+    });
   }
 };

@@ -15,16 +15,24 @@ import purchaseRoutes from './routes/purchase.routes.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware de logging para debug
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
+// Configurar CORS antes de outras middlewares
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'https://clientchatbotibmec-production.up.railway.app'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+
+// Middleware para logging mais detalhado
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Origin:', req.get('origin'));
+  next();
+});
 
 app.use(express.json());
 
