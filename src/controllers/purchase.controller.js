@@ -206,6 +206,9 @@ export const getCustomerPurchases = async (req, res) => {
 
 export const getSalesReport = async (req, res) => {
   try {
+    // Garantir que estamos enviando JSON
+    res.setHeader('Content-Type', 'application/json');
+
     // Obter vendas por produto com informações do produto
     const salesByProduct = await Purchase.findAll({
       attributes: [
@@ -236,15 +239,25 @@ export const getSalesReport = async (req, res) => {
       ],
     });
 
-    res.json({
-      salesByProduct,
-      averageTicket: Number(averageTicket.getDataValue('average_ticket')),
-      totalPurchases: Number(totals.getDataValue('total_purchases')),
-      totalRevenue: Number(totals.getDataValue('total_revenue')),
-    });
+    const response = {
+      salesByProduct: salesByProduct.map(sale => ({
+        product: sale.Product,
+        total_sales: Number(sale.getDataValue('total_sales')),
+        total_revenue: Number(sale.getDataValue('total_revenue')),
+      })),
+      averageTicket: Number(averageTicket.getDataValue('average_ticket') || 0),
+      totalPurchases: Number(totals.getDataValue('total_purchases') || 0),
+      totalRevenue: Number(totals.getDataValue('total_revenue') || 0),
+    };
+
+    console.log('Enviando relatório:', response);
+    return res.json(response);
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: error.message 
+    });
   }
 };
 
