@@ -36,6 +36,18 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Adicionar antes das rotas
+app.use((req, res, next) => {
+  console.log('Request recebida:');
+  console.log('URL:', req.url);
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('Query:', req.query);
+  console.log('Params:', req.params);
+  next();
+});
+
 // Rota básica para healthcheck
 app.get('/', (req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV });
