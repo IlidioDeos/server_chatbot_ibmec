@@ -1,5 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+// Modificar para usar variável de ambiente
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -10,8 +11,12 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000/api',
-        description: 'Servidor de desenvolvimento',
+        url: process.env.NODE_ENV === 'production'
+          ? process.env.API_URL || 'https://serverchatbotibmec-production.up.railway.app/api'
+          : 'http://localhost:3000/api',
+        description: process.env.NODE_ENV === 'production'
+          ? 'Servidor de Produção'
+          : 'Servidor de Desenvolvimento',
       },
     ],
   },

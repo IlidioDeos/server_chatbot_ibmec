@@ -14,7 +14,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// Modificar as linhas 16-18 para:
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? [process.env.FRONTEND_URL, 'https://seu-frontend-url.railway.app']
+    : 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 
 // Swagger
@@ -28,7 +34,7 @@ app.use('/api/purchases', purchaseRoutes);
 // Database sync and server start
 const startServer = async () => {
   try {
-    await sequelize.sync({ force: true }); // Em produção, usar force: false
+    await sequelize.sync({ force: process.env.NODE_ENV !== 'production' });
     console.log('Database synced successfully');
 
     // Inserir dados iniciais
