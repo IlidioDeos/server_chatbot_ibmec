@@ -1,62 +1,44 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import swaggerUi from 'swagger-ui-express';
-import { sequelize } from './config/database.js';
-import productRoutes from './routes/product.routes.js';
-import customerRoutes from './routes/customer.routes.js';
-import purchaseRoutes from './routes/purchase.routes.js';
-import { specs } from './swagger.js';
+import { sequelize } from './database/database.js';
 import { seedInitialData } from './seeders/initial-data.js';
-
-dotenv.config();
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './swagger.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Modificar as linhas 16-18 para:
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? process.env.CORS_ORIGIN
+    ? process.env.FRONTEND_URL
     : 'http://localhost:5173',
   credentials: true
 }));
+
 app.use(express.json());
 
-// Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-
-// Routes
-app.use('/api/products', productRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/purchases', purchaseRoutes);
+// Swagger setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const startServer = async () => {
   try {
-    // Em produção, não forçamos o sync e só inserimos dados se necessário
-    if (process.env.NODE_ENV === 'production') {
-      await sequelize.sync();
-      
-      // Verificar se já existem dados
-      const productsCount = await Product.count();
-      const customersCount = await Customer.count();
-      
-      if (productsCount === 0 && customersCount === 0) {
-        await seedInitialData();
-      }
-    } else {
-      await sequelize.sync({ force: true });
+    await sequelize.sync();
+    
+    // Verifica se já existem dados
+    const productCount = await Product.count();
+    const customerCount = await Customer.count();
+    
+    // Se não houver dados, executa o seeder
+    if (productCount === 0 && customerCount === 0) {
       await seedInitialData();
     }
-
-    console.log('Database synced successfully');
-
+    
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+      console.log(`Servidor rodando na porta ${PORT}`);
+      console.log(`Swagger disponível em: http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
-    console.error('Unable to start server:', error);
+    console.error('Erro ao iniciar servidor:', error);
     process.exit(1);
   }
 };
