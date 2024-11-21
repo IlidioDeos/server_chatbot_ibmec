@@ -5,7 +5,7 @@ import { seedInitialData } from './seeders/initial-data.js';
 import { Product } from './models/product.model.js';
 import { Customer } from './models/customer.model.js';
 import swaggerUi from 'swagger-ui-express';
-import { swaggerSpec } from './swagger.js';
+import { specs as swaggerSpec } from './swagger.js';
 
 // Importar rotas
 import customerRoutes from './routes/customer.routes.js';
@@ -43,20 +43,30 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const startServer = async () => {
   try {
+    console.log('Iniciando servidor...');
+    console.log('Ambiente:', process.env.NODE_ENV);
+    console.log('Frontend URL:', process.env.FRONTEND_URL);
+    
     // Testar conexão com o banco
     await sequelize.authenticate();
     console.log('Database connection established successfully');
 
     // Sincronizar modelos com o banco
+    console.log('Sincronizando modelos...');
     await sequelize.sync({ force: process.env.RESET_DB === 'true' });
     console.log('Database synced');
     
     // Verificar se já existem dados
+    console.log('Verificando dados existentes...');
     const productCount = await Product.count();
     const customerCount = await Customer.count();
     
+    console.log(`Produtos encontrados: ${productCount}`);
+    console.log(`Clientes encontrados: ${customerCount}`);
+    
     // Se não houver dados, executa o seeder
     if (productCount === 0 && customerCount === 0) {
+      console.log('Populando banco de dados com dados iniciais...');
       await seedInitialData();
       console.log('Initial data seeded successfully');
     }
@@ -68,6 +78,7 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error('Error starting server:', error);
+    console.error('Stack trace:', error.stack);
     process.exit(1);
   }
 };
