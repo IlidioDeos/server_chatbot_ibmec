@@ -57,6 +57,7 @@ export const deleteCustomer = async (req, res) => {
 };
 
 export const getCustomerBalance = async (req, res) => {
+  console.log('Requisição recebida para email:', req.params.email);
   try {
     const customer = await Customer.findOne({
       where: { email: req.params.email },
@@ -64,9 +65,11 @@ export const getCustomerBalance = async (req, res) => {
     });
 
     if (!customer) {
+      console.log('Cliente não encontrado:', req.params.email);
       return res.status(404).json({ message: 'Cliente não encontrado' });
     }
 
+    console.log('Saldo encontrado:', customer.balance);
     res.json({
       balance: customer.balance,
       name: customer.name

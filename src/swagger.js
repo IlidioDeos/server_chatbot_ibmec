@@ -12,7 +12,7 @@ const options = {
     servers: [
       {
         url: process.env.NODE_ENV === 'production'
-          ? process.env.API_URL || 'https://serverchatbotibmec-production.up.railway.app/api'
+          ? process.env.FRONTEND_URL + '/api'
           : 'http://localhost:3000/api',
         description: process.env.NODE_ENV === 'production'
           ? 'Servidor de Produção'
