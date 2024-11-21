@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 // Modificar as linhas 16-18 para:
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL, 'https://seu-frontend-url.railway.app']
+    ? process.env.CORS_ORIGIN
     : 'http://localhost:5173',
   credentials: true
 }));
@@ -31,14 +31,25 @@ app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/purchases', purchaseRoutes);
 
-// Database sync and server start
 const startServer = async () => {
   try {
-    await sequelize.sync({ force: process.env.NODE_ENV !== 'production' });
-    console.log('Database synced successfully');
+    // Em produção, não forçamos o sync e só inserimos dados se necessário
+    if (process.env.NODE_ENV === 'production') {
+      await sequelize.sync();
+      
+      // Verificar se já existem dados
+      const productsCount = await Product.count();
+      const customersCount = await Customer.count();
+      
+      if (productsCount === 0 && customersCount === 0) {
+        await seedInitialData();
+      }
+    } else {
+      await sequelize.sync({ force: true });
+      await seedInitialData();
+    }
 
-    // Inserir dados iniciais
-    await seedInitialData();
+    console.log('Database synced successfully');
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
