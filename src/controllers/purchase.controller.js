@@ -206,9 +206,6 @@ export const getCustomerPurchases = async (req, res) => {
 
 export const getSalesReport = async (req, res) => {
   try {
-    // Garantir que estamos enviando JSON
-    res.setHeader('Content-Type', 'application/json');
-
     // Obter vendas por produto com informações do produto
     const salesByProduct = await Purchase.findAll({
       attributes: [
@@ -239,33 +236,20 @@ export const getSalesReport = async (req, res) => {
       ],
     });
 
-    const response = {
-      salesByProduct: salesByProduct.map(sale => ({
-        product: sale.Product,
-        total_sales: Number(sale.getDataValue('total_sales')),
-        total_revenue: Number(sale.getDataValue('total_revenue')),
-      })),
-      averageTicket: Number(averageTicket.getDataValue('average_ticket') || 0),
-      totalPurchases: Number(totals.getDataValue('total_purchases') || 0),
-      totalRevenue: Number(totals.getDataValue('total_revenue') || 0),
-    };
-
-    console.log('Enviando relatório:', response);
-    return res.json(response);
+    res.json({
+      salesByProduct,
+      averageTicket: Number(averageTicket.getDataValue('average_ticket')),
+      totalPurchases: Number(totals.getDataValue('total_purchases')),
+      totalRevenue: Number(totals.getDataValue('total_revenue')),
+    });
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
-    return res.status(500).json({ 
-      error: 'Internal Server Error',
-      message: error.message 
-    });
+    res.status(500).json({ message: error.message });
   }
 };
 
 export const getPurchaseReport = async (req, res) => {
   try {
-    // Garantir que estamos enviando JSON
-    res.setHeader('Content-Type', 'application/json');
-
     const purchases = await Purchase.findAll({
       include: [{
         model: Product,
@@ -287,14 +271,12 @@ export const getPurchaseReport = async (req, res) => {
     });
 
     // Calcular totais gerais
-    const totalRevenue = purchases.reduce((sum, p) => sum + Number(p.total_revenue || 0), 0);
-    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.total_purchases || 0), 0);
+    const totalRevenue = purchases.reduce((sum, p) => sum + Number(p.total_revenue), 0);
+    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.total_purchases), 0);
     const averagePurchase = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
 
     // Agrupar por produto
     const productStats = purchases.reduce((acc, p) => {
-      if (!p.Product) return acc;
-      
       const productId = p.Product.id;
       if (!acc[productId]) {
         acc[productId] = {
@@ -303,35 +285,22 @@ export const getPurchaseReport = async (req, res) => {
           total_purchases: 0
         };
       }
-      acc[productId].total_revenue += Number(p.total_revenue || 0);
-      acc[productId].total_purchases += Number(p.total_purchases || 0);
+      acc[productId].total_revenue += Number(p.total_revenue);
+      acc[productId].total_purchases += Number(p.total_purchases);
       return acc;
     }, {});
 
-    // Formatar resposta
-    const response = {
+    res.json({
       summary: {
         total_revenue: totalRevenue,
         total_purchases: totalPurchases,
         average_purchase: averagePurchase
       },
-      daily_stats: purchases.map(p => ({
-        date: p.date,
-        total_purchases: Number(p.total_purchases || 0),
-        total_revenue: Number(p.total_revenue || 0),
-        average_purchase: Number(p.average_purchase || 0),
-        Product: p.Product
-      })),
+      daily_stats: purchases,
       product_stats: Object.values(productStats)
-    };
-
-    console.log('Enviando relatório:', response);
-    return res.json(response);
+    });
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
-    return res.status(500).json({ 
-      error: 'Internal Server Error',
-      message: error.message 
-    });
+    res.status(500).json({ message: error.message });
   }
 };
