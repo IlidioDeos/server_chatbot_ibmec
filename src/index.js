@@ -6,6 +6,7 @@ import { Product } from './models/product.model.js';
 import { Customer } from './models/customer.model.js';
 import swaggerUi from 'swagger-ui-express';
 import { specs as swaggerSpec } from './swagger.js';
+import path from 'path';
 
 // Importar rotas
 import customerRoutes from './routes/customer.routes.js';
@@ -28,13 +29,32 @@ app.use(cors({
 }));
 
 // Middleware para garantir que todas as respostas sejam JSON
-app.use((req, res, next) => {
+app.use('/api', (req, res, next) => {
   res.setHeader('Content-Type', 'application/json');
+  
+  // Interceptar o método send para garantir que sempre enviamos JSON
+  const originalSend = res.send;
+  res.send = function(body) {
+    try {
+      // Se o body já não for uma string JSON, tenta converter
+      if (typeof body !== 'string' || !body.startsWith('{')) {
+        body = JSON.stringify(body);
+      }
+      return originalSend.call(this, body);
+    } catch (error) {
+      console.error('Erro ao converter resposta para JSON:', error);
+      return res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: 'Erro ao processar resposta'
+      });
+    }
+  };
+  
   next();
 });
 
 // Middleware para logging mais detalhado
-app.use((req, res, next) => {
+app.use('/api', (req, res, next) => {
   console.log('Request recebida:');
   console.log('URL:', req.url);
   console.log('Method:', req.method);
@@ -57,13 +77,21 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/purchases', purchaseRoutes);
 
-// Middleware para tratar rotas não encontradas
-app.use((req, res) => {
+// Middleware para tratar rotas não encontradas da API
+app.use('/api/*', (req, res) => {
   res.status(404).json({ 
     error: 'Not Found',
     message: `Rota ${req.method} ${req.url} não encontrada`,
     timestamp: new Date().toISOString()
   });
+});
+
+// Rota para servir o frontend em produção
+app.use(express.static('dist'));
+
+// Todas as outras rotas não encontradas retornam o index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Error handling middleware
