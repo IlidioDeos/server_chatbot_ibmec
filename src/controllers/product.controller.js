@@ -10,11 +10,13 @@ export const getAllProducts = async (req, res) => {
       const productJson = product.toJSON();
       return {
         ...productJson,
-        price: productJson.price.toString()
+        price: String(productJson.price),
+        description: productJson.description || '',
+        region: productJson.region || ''
       };
     });
     
-    res.json(formattedProducts);
+    res.json(Array.isArray(formattedProducts) ? formattedProducts : [formattedProducts]);
   } catch (error) {
     console.error('Erro ao buscar produtos:', error);
     res.status(500).json({ message: error.message });

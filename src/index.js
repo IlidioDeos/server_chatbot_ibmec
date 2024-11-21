@@ -32,12 +32,19 @@ app.use(cors({
 app.use('/api', (req, res, next) => {
   res.setHeader('Content-Type', 'application/json');
   
-  // Interceptar o método send para garantir que sempre enviamos JSON
+  // Interceptar o método send para garantir que sempre enviamos JSON válido
   const originalSend = res.send;
   res.send = function(body) {
     try {
-      // Se o body já não for uma string JSON, tenta converter
-      if (typeof body !== 'string' || !body.startsWith('{')) {
+      // Se o body já for uma string JSON, não precisa converter
+      if (typeof body === 'string') {
+        try {
+          JSON.parse(body); // Verificar se é JSON válido
+          return originalSend.call(this, body);
+        } catch (e) {
+          body = JSON.stringify(body);
+        }
+      } else {
         body = JSON.stringify(body);
       }
       return originalSend.call(this, body);
