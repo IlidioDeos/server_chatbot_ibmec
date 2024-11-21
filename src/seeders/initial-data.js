@@ -4,22 +4,22 @@ import { Customer } from '../models/customer.model.js';
 export const seedInitialData = async () => {
   try {
     // Criar produtos iniciais
-    await Product.bulkCreate([
+    const products = await Product.bulkCreate([
       {
         name: 'Fone de Ouvido Premium',
-        price: 199.99,
+        price: '199.99',
         region: 'Norte',
         description: 'Fone de ouvido sem fio com cancelamento de ruído',
       },
       {
         name: 'Relógio Inteligente Pro',
-        price: 299.99,
+        price: '299.99',
         region: 'Sul',
         description: 'Smartwatch avançado com monitoramento de saúde',
       },
       {
         name: 'Notebook Elite',
-        price: 1299.99,
+        price: '1299.99',
         region: 'Leste',
         description: 'Notebook potente para profissionais',
       },
@@ -31,18 +31,20 @@ export const seedInitialData = async () => {
         email: 'admin@example.com',
         name: 'Administrador',
         region: 'Brasil',
-        balance: 0, // Admin não precisa de saldo
+        balance: '0.00',
       },
       {
         email: 'cliente@example.com',
         name: 'Cliente Teste',
         region: 'Brasil',
-        balance: 10000.00, // Saldo inicial de 10000
+        balance: '10000.00',
       },
     ]);
 
     console.log('Dados iniciais inseridos com sucesso!');
+    return products;
   } catch (error) {
     console.error('Erro ao inserir dados iniciais:', error);
+    throw error;
   }
 };

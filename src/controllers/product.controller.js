@@ -6,10 +6,13 @@ export const getAllProducts = async (req, res) => {
       attributes: ['id', 'name', 'price', 'description', 'region', 'createdAt', 'updatedAt']
     });
     
-    const formattedProducts = products.map(product => ({
-      ...product.toJSON(),
-      price: product.price.toString()
-    }));
+    const formattedProducts = products.map(product => {
+      const productJson = product.toJSON();
+      return {
+        ...productJson,
+        price: productJson.price.toString()
+      };
+    });
     
     res.json(formattedProducts);
   } catch (error) {
