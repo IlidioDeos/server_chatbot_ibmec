@@ -263,6 +263,9 @@ export const getSalesReport = async (req, res) => {
 
 export const getPurchaseReport = async (req, res) => {
   try {
+    // Garantir que estamos enviando JSON
+    res.setHeader('Content-Type', 'application/json');
+
     const purchases = await Purchase.findAll({
       include: [{
         model: Product,
@@ -284,12 +287,14 @@ export const getPurchaseReport = async (req, res) => {
     });
 
     // Calcular totais gerais
-    const totalRevenue = purchases.reduce((sum, p) => sum + Number(p.total_revenue), 0);
-    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.total_purchases), 0);
+    const totalRevenue = purchases.reduce((sum, p) => sum + Number(p.total_revenue || 0), 0);
+    const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.total_purchases || 0), 0);
     const averagePurchase = totalPurchases > 0 ? totalRevenue / totalPurchases : 0;
 
     // Agrupar por produto
     const productStats = purchases.reduce((acc, p) => {
+      if (!p.Product) return acc;
+      
       const productId = p.Product.id;
       if (!acc[productId]) {
         acc[productId] = {
@@ -298,22 +303,35 @@ export const getPurchaseReport = async (req, res) => {
           total_purchases: 0
         };
       }
-      acc[productId].total_revenue += Number(p.total_revenue);
-      acc[productId].total_purchases += Number(p.total_purchases);
+      acc[productId].total_revenue += Number(p.total_revenue || 0);
+      acc[productId].total_purchases += Number(p.total_purchases || 0);
       return acc;
     }, {});
 
-    res.json({
+    // Formatar resposta
+    const response = {
       summary: {
         total_revenue: totalRevenue,
         total_purchases: totalPurchases,
         average_purchase: averagePurchase
       },
-      daily_stats: purchases,
+      daily_stats: purchases.map(p => ({
+        date: p.date,
+        total_purchases: Number(p.total_purchases || 0),
+        total_revenue: Number(p.total_revenue || 0),
+        average_purchase: Number(p.average_purchase || 0),
+        Product: p.Product
+      })),
       product_stats: Object.values(productStats)
-    });
+    };
+
+    console.log('Enviando relatório:', response);
+    return res.json(response);
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: error.message 
+    });
   }
 };
