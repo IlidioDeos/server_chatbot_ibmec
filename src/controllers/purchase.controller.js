@@ -253,6 +253,8 @@ export const getSalesReport = async (req, res) => {
 
 export const getPurchaseReport = async (req, res) => {
   try {
+    console.log('Gerando relatório de compras...');
+    
     const purchases = await Purchase.findAll({
       include: [{
         model: Product,
@@ -272,6 +274,8 @@ export const getPurchaseReport = async (req, res) => {
       raw: true,
       nest: true
     });
+
+    console.log('Compras encontradas:', purchases.length);
 
     // Calcular totais gerais
     const totalRevenue = purchases.reduce((sum, p) => sum + Number(p.total_revenue), 0);
@@ -293,7 +297,7 @@ export const getPurchaseReport = async (req, res) => {
       return acc;
     }, {});
 
-    res.json({
+    const report = {
       summary: {
         total_revenue: totalRevenue,
         total_purchases: totalPurchases,
@@ -301,7 +305,10 @@ export const getPurchaseReport = async (req, res) => {
       },
       daily_stats: purchases,
       product_stats: Object.values(productStats)
-    });
+    };
+
+    console.log('Relatório gerado com sucesso');
+    res.json(report);
   } catch (error) {
     console.error('Erro ao gerar relatório:', error);
     res.status(500).json({ message: error.message });
