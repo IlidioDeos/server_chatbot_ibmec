@@ -22,21 +22,18 @@ app.use(cors({
     'https://clientchatbotibmec-production.up.railway.app'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 
-// Middleware para logging mais detalhado
+// Middleware para garantir que todas as respostas sejam JSON
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
-  console.log('Origin:', req.get('origin'));
+  res.setHeader('Content-Type', 'application/json');
   next();
 });
 
-app.use(express.json());
-
-// Adicionar antes das rotas
+// Middleware para logging mais detalhado
 app.use((req, res, next) => {
   console.log('Request recebida:');
   console.log('URL:', req.url);
@@ -48,6 +45,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(express.json());
+
 // Rota básica para healthcheck
 app.get('/', (req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV });
@@ -57,6 +56,25 @@ app.get('/', (req, res) => {
 app.use('/api/customers', customerRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/purchases', purchaseRoutes);
+
+// Middleware para tratar rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({ 
+    error: 'Not Found',
+    message: `Rota ${req.method} ${req.url} não encontrada`,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Erro na aplicação:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Erro interno do servidor',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Swagger setup
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -102,14 +120,5 @@ const startServer = async () => {
     process.exit(1);
   }
 };
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
 
 startServer();
