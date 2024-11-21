@@ -11,7 +11,15 @@ let sequelizeConfig;
 
 if (process.env.DATABASE_URL) {
   console.log('Usando DATABASE_URL para conexão');
-  sequelizeConfig = new Sequelize(process.env.DATABASE_URL, {
+  
+  // Garantir que a URL começa com postgresql://
+  const databaseUrl = process.env.DATABASE_URL.startsWith('postgresql://') 
+    ? process.env.DATABASE_URL 
+    : `postgresql://${process.env.DATABASE_URL}`;
+  
+  console.log('URL formatada:', databaseUrl.replace(/\/\/.*@/, '//*****@')); // Log seguro da URL
+  
+  sequelizeConfig = new Sequelize(databaseUrl, {
     dialect: 'postgres',
     logging: console.log,
     dialectOptions: {
@@ -29,32 +37,28 @@ if (process.env.DATABASE_URL) {
   });
 } else {
   console.log('Usando configuração manual para conexão');
-  console.log('Host:', process.env.POSTGRES_HOST || process.env.RAILWAY_PRIVATE_DOMAIN);
-  console.log('Port:', process.env.POSTGRES_PORT || '5432');
   
-  sequelizeConfig = new Sequelize(
-    process.env.POSTGRES_DB || 'railway',
-    process.env.POSTGRES_USER || 'postgres',
-    process.env.POSTGRES_PASSWORD,
-    {
-      host: process.env.POSTGRES_HOST || process.env.RAILWAY_PRIVATE_DOMAIN,
-      port: parseInt(process.env.POSTGRES_PORT || '5432'),
-      dialect: 'postgres',
-      logging: console.log,
-      dialectOptions: {
-        ssl: process.env.NODE_ENV === 'production' ? {
-          require: true,
-          rejectUnauthorized: false
-        } : false
-      },
-      pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      }
+  // Construir a URL do banco de dados manualmente
+  const dbUrl = `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST || process.env.RAILWAY_PRIVATE_DOMAIN}:${process.env.POSTGRES_PORT || '5432'}/${process.env.POSTGRES_DB || 'railway'}`;
+  
+  console.log('URL construída:', dbUrl.replace(/\/\/.*@/, '//*****@')); // Log seguro da URL
+  
+  sequelizeConfig = new Sequelize(dbUrl, {
+    dialect: 'postgres',
+    logging: console.log,
+    dialectOptions: {
+      ssl: process.env.NODE_ENV === 'production' ? {
+        require: true,
+        rejectUnauthorized: false
+      } : false
+    },
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
     }
-  );
+  });
 }
 
 export const sequelize = sequelizeConfig;
